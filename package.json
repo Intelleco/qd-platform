@@ -1,0 +1,28 @@
+{
+  "name": "qd-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --persist-to .wrangler/state",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "wrangler:types": "wrangler types",
+    "wrangler:check": "wrangler check",
+    "corpus:upload:local": "tsx scripts/upload-corpus.ts --local --persist-to .wrangler/state",
+    "corpus:upload:remote": "tsx scripts/upload-corpus.ts --remote"
+  },
+  "dependencies": {
+    "hono": "^4.10.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14",
+    "wrangler": "^4.50.0"
+  }
+}
+

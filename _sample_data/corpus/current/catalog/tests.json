@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-05-01T15:55:51Z",
+  "summary": {
+    "total_rows": 10044,
+    "graphic_rows": 738,
+    "duplicate_item_id_groups": 126
+  },
+  "tests": [
+    {
+      "id": "amc8",
+      "label": "AMC 8",
+      "display_name": "American Mathematics Competitions 8",
+      "description": "Middle school mathematics contest questions from the AMC 8.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/amc8.jsonl",
+      "row_count": 1000,
+      "graphic_row_count": 324,
+      "response_formats": [
+        "multiple_choice"
+      ],
+      "sessions": [],
+      "year_min": 1985,
+      "year_max": 2025,
+      "question_number_min": 1,
+      "question_number_max": 25
+    },
+    {
+      "id": "amc10",
+      "label": "AMC 10",
+      "display_name": "American Mathematics Competitions 10",
+      "description": "High school mathematics contest questions from the AMC 10.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/amc10.jsonl",
+      "row_count": 1300,
+      "graphic_row_count": 181,
+      "response_formats": [
+        "multiple_choice"
+      ],
+      "sessions": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "year_min": 2000,
+      "year_max": 2025,
+      "question_number_min": 1,
+      "question_number_max": 25
+    },
+    {
+      "id": "amc12",
+      "label": "AMC 12",
+      "display_name": "American Mathematics Competitions 12",
+      "description": "High school mathematics contest questions from the AMC 12.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/amc12.jsonl",
+      "row_count": 1300,
+      "graphic_row_count": 143,
+      "response_formats": [
+        "multiple_choice"
+      ],
+      "sessions": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "year_min": 2000,
+      "year_max": 2025,
+      "question_number_min": 1,
+      "question_number_max": 25
+    },
+    {
+      "id": "aime",
+      "label": "AIME",
+      "display_name": "American Invitational Mathematics Examination",
+      "description": "Integer-answer contest questions from the AIME.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/aime.jsonl",
+      "row_count": 1035,
+      "graphic_row_count": 90,
+      "response_formats": [
+        "numeric_response"
+      ],
+      "sessions": [
+        "I",
+        "II"
+      ],
+      "year_min": 1983,
+      "year_max": 2025,
+      "question_number_min": 1,
+      "question_number_max": 15
+    },
+    {
+      "id": "sat_math",
+      "label": "SAT Math",
+      "display_name": "SAT Math",
+      "description": "Math questions from SAT practice and assessment materials.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/sat_math.jsonl",
+      "row_count": 2306,
+      "graphic_row_count": 0,
+      "response_formats": [
+        "multiple_choice",
+        "numeric_response"
+      ],
+      "sessions": [],
+      "year_min": null,
+      "year_max": null,
+      "question_number_min": null,
+      "question_number_max": null
+    },
+    {
+      "id": "sat_rw",
+      "label": "SAT Reading and Writing",
+      "display_name": "SAT Reading and Writing",
+      "description": "Reading and Writing questions from SAT practice and assessment materials.",
+      "status": "active",
+      "kind": "test",
+      "object_key": "corpus/current/content/tests/sat_rw.jsonl",
+      "row_count": 3103,
+      "graphic_row_count": 0,
+      "response_formats": [
+        "multiple_choice"
+      ],
+      "sessions": [],
+      "year_min": null,
+      "year_max": null,
+      "question_number_min": null,
+      "question_number_max": null
+    }
+  ]
+}

@@ -6,14 +6,16 @@ import { buildPlatformSpec } from "../spec/data";
 import { renderSpecMarkdown } from "../spec/markdown";
 
 export function registerSpecRoutes(app: Hono<AppEnv>): void {
-  app.get("/v1/spec", (c) => {
+  app.get("/v1/spec", async (c) => {
+    const catalog = await c.get("corpusReader").readCatalog();
     c.header("Cache-Control", "public, max-age=60");
-    return success(c, buildPlatformSpec());
+    return success(c, buildPlatformSpec(catalog));
   });
 
-  app.get("/v1/spec.md", (c) => {
+  app.get("/v1/spec.md", async (c) => {
+    const catalog = await c.get("corpusReader").readCatalog();
     c.header("Cache-Control", "public, max-age=60");
-    return c.text(renderSpecMarkdown(buildPlatformSpec()));
+    return c.text(renderSpecMarkdown(buildPlatformSpec(catalog)));
   });
 
   app.all("/v1/spec", (c) => {
@@ -24,4 +26,3 @@ export function registerSpecRoutes(app: Hono<AppEnv>): void {
     throw methodNotAllowed(["GET", "OPTIONS"]);
   });
 }
-

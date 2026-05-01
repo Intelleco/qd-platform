@@ -6,8 +6,9 @@ import type { AppEnv } from "../lib/types";
 
 export function registerQuestionRoutes(app: Hono<AppEnv>): void {
   app.get("/v1/questions", async (c) => {
-    const args = parseQuestionSearch(new URL(c.req.url).searchParams);
     const corpus = c.get("corpusReader");
+    const catalog = await corpus.readCatalog();
+    const args = parseQuestionSearch(new URL(c.req.url).searchParams, catalog);
     const records = await corpus.readTest(args.test);
     const filtered = filterQuestions(records, args);
     const items = sampleQuestions(filtered, args.limit, c.get("rng"));
@@ -28,4 +29,3 @@ export function registerQuestionRoutes(app: Hono<AppEnv>): void {
     throw methodNotAllowed(["GET", "OPTIONS"]);
   });
 }
-

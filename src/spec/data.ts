@@ -1,57 +1,48 @@
-import {
-  CORPUS_GRAPHIC_ROWS,
-  CORPUS_TOTAL_ROWS,
-  DIFFICULTIES,
-  DUPLICATE_ITEM_ID_GROUPS,
-  TEST_CONFIG,
-  TEST_IDS
-} from "../lib/constants";
+import { activeTestEntries, DIFFICULTIES, RESPONSE_FORMATS, testIds } from "../lib/constants";
+import type { TestCatalog, TestCatalogEntry } from "../lib/types";
 
 export const SPEC_VERSION = "2026-04-28";
 
-export function buildPlatformSpec() {
+export function buildPlatformSpec(catalog: TestCatalog) {
   return {
     version: SPEC_VERSION,
     corpus: {
-      total_rows: CORPUS_TOTAL_ROWS,
-      graphic_rows: CORPUS_GRAPHIC_ROWS,
-      duplicate_item_id_groups: DUPLICATE_ITEM_ID_GROUPS,
+      total_rows: catalog.summary.total_rows,
+      graphic_rows: catalog.summary.graphic_rows,
+      duplicate_item_id_groups: catalog.summary.duplicate_item_id_groups,
       notes: [
         "Rows with metadata.contain_graphic=true are returned unchanged in the MVP.",
         "item_id is content-hash based and is not globally unique across test files."
       ]
     },
     tests: Object.fromEntries(
-      TEST_IDS.map((test) => {
-        const config = TEST_CONFIG[test];
-        return [
-          test,
-          {
-            label: config.label,
-            years: { min: config.yearMin, max: config.yearMax },
-            sessions: config.sessions,
-            question_numbers: {
-              min: config.questionNumberMin,
-              max: config.questionNumberMax
-            },
-            response_formats: config.responseFormats,
-            difficulty_values_present: DIFFICULTIES,
-            row_count: config.rowCount,
-            graphic_row_count: config.graphicRowCount
-          }
-        ];
-      })
-    ),
+      activeTestEntries(catalog).map((config) => [
+        config.id,
+        {
+          label: config.label,
+          display_name: config.display_name,
+          description: config.description,
+          object_key: config.object_key,
+          years: rangeObject(config.year_min, config.year_max),
+          sessions: config.sessions,
+          question_numbers: rangeObject(config.question_number_min, config.question_number_max),
+          response_formats: config.response_formats,
+          difficulty_values_present: DIFFICULTIES,
+          row_count: config.row_count,
+          graphic_row_count: config.graphic_row_count
+        }
+      ])
+    ) as Record<string, TestSpec>,
     filters: {
-      test: { type: "enum", required: true, values: TEST_IDS },
-      year: { type: "integer", required: false, behavior: "exact citation.year match" },
-      session: { type: "enum", required: false, applicable_tests: ["amc10", "amc12", "aime"] },
-      question_number: { type: "integer", required: false, behavior: "exact original exam position match" },
+      test: { type: "enum", required: true, values: testIds(catalog) },
+      year: { type: "integer", required: false, behavior: "exact citation.year match when available" },
+      session: { type: "enum", required: false, behavior: "exact citation.session match when available" },
+      question_number: { type: "integer", required: false, behavior: "exact original exam position match when available" },
       difficulty: { type: "enum", required: false, values: DIFFICULTIES },
       response_format: {
         type: "enum",
         required: false,
-        values: ["multiple_choice", "numeric_response"]
+        values: RESPONSE_FORMATS
       },
       limit: { type: "integer", required: false, default: 20, minimum: 1, maximum: 100 }
     },
@@ -62,12 +53,12 @@ export function buildPlatformSpec() {
         required: ["test"],
         additionalProperties: false,
         properties: {
-          test: { type: "string", enum: TEST_IDS },
+          test: { type: "string", enum: testIds(catalog) },
           year: { type: "integer" },
           session: { type: "string" },
           question_number: { type: "integer" },
           difficulty: { type: "string", enum: DIFFICULTIES },
-          response_format: { type: "string", enum: ["multiple_choice", "numeric_response"] },
+          response_format: { type: "string", enum: RESPONSE_FORMATS },
           limit: { type: "integer", minimum: 1, maximum: 100, default: 20 }
         }
       },
@@ -78,17 +69,17 @@ export function buildPlatformSpec() {
     },
     response_formats: {
       multiple_choice: {
-        discriminator: "metadata.response_format",
+        discriminator: "response_format",
         answer_shape: "{ selection_mode: 'single'|'multi', correct_option_ids: string[] }",
         options: "question.options"
       },
       numeric_response: {
-        discriminator: "metadata.response_format",
-        answer_shape: "{ response_type: 'integer', correct_value: number }"
+        discriminator: "response_format",
+        answer_shape: "{ response_type: 'numeric', accepted_values: unknown[] }"
       }
     },
     unsupported_examples: [
-      "SAT, ACT, AP, grade, topic, skill, standard, and non-math subject filters",
+      "ACT, AP, topic, skill, standard, and school subject filters",
       "Deterministic seeded sampling",
       "Pagination cursors",
       "Report submission"
@@ -96,3 +87,25 @@ export function buildPlatformSpec() {
   } as const;
 }
 
+type TestSpec = {
+  label: string;
+  display_name: string;
+  description: string;
+  object_key: string;
+  years: RangeSpec;
+  sessions: TestCatalogEntry["sessions"];
+  question_numbers: RangeSpec;
+  response_formats: TestCatalogEntry["response_formats"];
+  difficulty_values_present: typeof DIFFICULTIES;
+  row_count: number;
+  graphic_row_count: number;
+};
+
+type RangeSpec = { min: number; max: number } | null;
+
+function rangeObject(min: number | null, max: number | null): RangeSpec {
+  if (min === null || max === null) {
+    return null;
+  }
+  return { min, max };
+}

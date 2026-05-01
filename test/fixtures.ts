@@ -1,15 +1,19 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TEST_IDS } from "../src/lib/constants";
-import { parseJsonl } from "../src/lib/corpus";
-import type { QuestionRecord, TestId } from "../src/lib/types";
+import { activeTestEntries, TEST_CATALOG_OBJECT_KEY } from "../src/lib/constants";
+import { parseCatalog, parseJsonl } from "../src/lib/corpus";
+import type { QuestionRecord, TestCatalog } from "../src/lib/types";
 
-export function loadFixtureCorpus(): Record<TestId, readonly QuestionRecord[]> {
-  const entries = TEST_IDS.map((test) => {
-    const file = join("_sample_data", "corpus", `${test}.jsonl`);
-    return [test, parseJsonl(readFileSync(file, "utf8"))] as const;
+export function loadFixtureCatalog(): TestCatalog {
+  return parseCatalog(readFileSync(join("_sample_data", TEST_CATALOG_OBJECT_KEY), "utf8"));
+}
+
+export function loadFixtureCorpus(catalog = loadFixtureCatalog()): Record<string, readonly QuestionRecord[]> {
+  const entries = activeTestEntries(catalog).map((test) => {
+    const file = join("_sample_data", test.object_key);
+    return [test.id, parseJsonl(readFileSync(file, "utf8"))] as const;
   });
-  return Object.fromEntries(entries) as Record<TestId, readonly QuestionRecord[]>;
+  return Object.fromEntries(entries) as Record<string, readonly QuestionRecord[]>;
 }
 
 const unusedR2Bucket: R2Bucket = {

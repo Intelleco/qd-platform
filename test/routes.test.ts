@@ -2,13 +2,19 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../src/app";
 import { FixtureCorpusReader } from "../src/lib/corpus";
 import { corpusUnavailable } from "../src/lib/errors";
-import { loadFixtureCorpus, TEST_ENV } from "./fixtures";
+import { loadFixtureCatalog, loadFixtureCorpus, TEST_ENV } from "./fixtures";
 
-const corpus = loadFixtureCorpus();
+const catalog = loadFixtureCatalog();
+const corpus = loadFixtureCorpus(catalog);
+const records = (test: string) => {
+  const items = corpus[test];
+  expect(items).toBeDefined();
+  return items ?? [];
+};
 
 function makeApp(rng = () => 0) {
   return createApp({
-    corpusReader: new FixtureCorpusReader(corpus),
+    corpusReader: new FixtureCorpusReader(catalog, corpus),
     rng,
     allowedOrigins: ["https://qd.org", "http://localhost:5173"]
   });
@@ -40,6 +46,17 @@ describe("routes", () => {
     });
   });
 
+  it("serves SAT sections from the catalog", async () => {
+    const res = await makeApp().request("/v1/questions?test=sat_rw&response_format=multiple_choice&limit=3", {}, TEST_ENV);
+    const body = await json(res);
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      meta: { requested: 3, returned: 3, short: false }
+    });
+  });
+
   it("rejects invalid queries", async () => {
     const res = await makeApp().request("/v1/questions?test=amc8&session=A", {}, TEST_ENV);
     const body = await json(res);
@@ -48,8 +65,16 @@ describe("routes", () => {
     expect(body).toMatchObject({ ok: false, error: { code: "invalid_query" } });
   });
 
+  it("rejects filters unavailable for a catalog entry", async () => {
+    const res = await makeApp().request("/v1/questions?test=sat_rw&year=2025", {}, TEST_ENV);
+    const body = await json(res);
+
+    expect(res.status).toBe(400);
+    expect(body).toMatchObject({ ok: false, error: { code: "invalid_query" } });
+  });
+
   it("returns one random duplicate item match with metadata", async () => {
-    const duplicate = corpus.amc10.find((item) => corpus.amc12.some((other) => other.item_id === item.item_id));
+    const duplicate = records("amc10").find((item) => records("amc12").some((other) => other.item_id === item.item_id));
     expect(duplicate).toBeDefined();
 
     const res = await makeApp(() => 0.99).request(`/v1/items/${duplicate?.item_id}`, {}, TEST_ENV);
@@ -80,7 +105,7 @@ describe("routes", () => {
 
     expect(specBody).toMatchObject({
       ok: true,
-      data: { corpus: { graphic_rows: 738, duplicate_item_id_groups: 41 } }
+      data: { corpus: { total_rows: 10044, graphic_rows: 738, duplicate_item_id_groups: 126 } }
     });
     expect(markdown).toContain("Graphic-marked rows returned unchanged: 738");
     expect(markdown).toContain("AMC 10");
@@ -114,6 +139,9 @@ describe("routes", () => {
   it("maps corpus failures to corpus_unavailable", async () => {
     const app = createApp({
       corpusReader: {
+        async readCatalog() {
+          throw corpusUnavailable();
+        },
         async readTest() {
           throw corpusUnavailable();
         },

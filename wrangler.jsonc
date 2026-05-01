@@ -13,9 +13,14 @@
       "bucket_name": "qd-data"
     }
   ],
+  "routes": [
+    {
+      "pattern": "api.qd.org",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
   }
 }
-

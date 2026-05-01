@@ -1,16 +1,24 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { TEST_IDS, TEST_CONFIG } from "../src/lib/constants";
+import { pathToFileURL } from "node:url";
+import { activeTestEntries, TEST_CATALOG_OBJECT_KEY } from "../src/lib/constants";
+import { parseCatalog } from "../src/lib/corpus";
 
 interface UploadOptions {
   mode: "--local" | "--remote";
   persistTo?: string;
 }
 
+export interface UploadEntry {
+  source: string;
+  objectKey: string;
+  contentType: "application/json" | "application/x-ndjson";
+}
+
 const BUCKET_NAME = "qd-data";
 
-function parseArgs(args: readonly string[]): UploadOptions {
+export function parseArgs(args: readonly string[]): UploadOptions {
   const local = args.includes("--local");
   const remote = args.includes("--remote");
   if (local && remote) {
@@ -29,13 +37,29 @@ function parseArgs(args: readonly string[]): UploadOptions {
   };
 }
 
-function uploadOne(test: (typeof TEST_IDS)[number], options: UploadOptions): void {
-  const source = resolve("_sample_data", "corpus", `${test}.jsonl`);
-  if (!existsSync(source)) {
-    throw new Error(`Missing corpus fixture: ${source}`);
+export function buildUploadEntries(sampleRoot = "_sample_data"): readonly UploadEntry[] {
+  const catalogSource = resolve(sampleRoot, TEST_CATALOG_OBJECT_KEY);
+  const catalog = parseCatalog(readFileSync(catalogSource, "utf8"));
+  return [
+    {
+      source: catalogSource,
+      objectKey: TEST_CATALOG_OBJECT_KEY,
+      contentType: "application/json"
+    },
+    ...activeTestEntries(catalog).map((entry) => ({
+      source: resolve(sampleRoot, entry.object_key),
+      objectKey: entry.object_key,
+      contentType: "application/x-ndjson" as const
+    }))
+  ];
+}
+
+function uploadOne(entry: UploadEntry, options: UploadOptions): void {
+  if (!existsSync(entry.source)) {
+    throw new Error(`Missing corpus fixture: ${entry.source}`);
   }
 
-  const objectPath = `${BUCKET_NAME}/${TEST_CONFIG[test].objectKey}`;
+  const objectPath = `${BUCKET_NAME}/${entry.objectKey}`;
   const args = [
     "wrangler",
     "r2",
@@ -43,9 +67,9 @@ function uploadOne(test: (typeof TEST_IDS)[number], options: UploadOptions): voi
     "put",
     objectPath,
     "--file",
-    source,
+    entry.source,
     "--content-type",
-    "application/x-ndjson",
+    entry.contentType,
     "--force",
     options.mode
   ];
@@ -60,8 +84,14 @@ function uploadOne(test: (typeof TEST_IDS)[number], options: UploadOptions): voi
   }
 }
 
-const options = parseArgs(process.argv.slice(2));
-for (const test of TEST_IDS) {
-  uploadOne(test, options);
+export function main(args: readonly string[] = process.argv.slice(2)): void {
+  const options = parseArgs(args);
+  for (const entry of buildUploadEntries()) {
+    uploadOne(entry, options);
+  }
 }
 
+const entrypoint = process.argv[1];
+if (entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).href) {
+  main();
+}

@@ -1,13 +1,12 @@
 import {
   DIFFICULTIES,
+  findTestEntry,
   isDifficulty,
   isResponseFormat,
-  isTestId,
-  RESPONSE_FORMATS,
-  TEST_CONFIG
+  testIds
 } from "./constants";
 import { invalidQuery } from "./errors";
-import type { Difficulty, QuestionRecord, ResponseFormat, Rng, TestId } from "./types";
+import type { Difficulty, QuestionRecord, ResponseFormat, Rng, TestCatalog, TestId } from "./types";
 
 export interface QuestionSearchArgs {
   test: TestId;
@@ -31,7 +30,7 @@ const ALLOWED_PARAMS = new Set([
 
 const SCALAR_PARAMS = [...ALLOWED_PARAMS];
 
-export function parseQuestionSearch(searchParams: URLSearchParams): QuestionSearchArgs {
+export function parseQuestionSearch(searchParams: URLSearchParams, catalog: TestCatalog): QuestionSearchArgs {
   for (const key of searchParams.keys()) {
     if (!ALLOWED_PARAMS.has(key)) {
       throw invalidQuery(`Unsupported query parameter: ${key}.`);
@@ -44,12 +43,13 @@ export function parseQuestionSearch(searchParams: URLSearchParams): QuestionSear
     }
   }
 
+  const ids = testIds(catalog);
   const testValue = searchParams.get("test");
-  if (testValue === null || !isTestId(testValue)) {
-    throw invalidQuery(`test is required and must be one of: ${Object.keys(TEST_CONFIG).join(", ")}.`);
+  const config = testValue === null ? undefined : findTestEntry(catalog, testValue);
+  if (testValue === null || config === undefined) {
+    throw invalidQuery(`test is required and must be one of: ${ids.join(", ")}.`);
   }
 
-  const config = TEST_CONFIG[testValue];
   const limit = parseOptionalInteger(searchParams.get("limit"), "limit") ?? 20;
   const args: QuestionSearchArgs = {
     test: testValue,
@@ -62,17 +62,23 @@ export function parseQuestionSearch(searchParams: URLSearchParams): QuestionSear
 
   const year = parseOptionalInteger(searchParams.get("year"), "year");
   if (year !== undefined) {
-    if (year < config.yearMin || year > config.yearMax) {
-      throw invalidQuery(`year must be between ${config.yearMin} and ${config.yearMax} for ${testValue}.`);
+    if (config.year_min === null || config.year_max === null) {
+      throw invalidQuery(`year is not available for ${testValue}.`);
+    }
+    if (year < config.year_min || year > config.year_max) {
+      throw invalidQuery(`year must be between ${config.year_min} and ${config.year_max} for ${testValue}.`);
     }
     args.year = year;
   }
 
   const questionNumber = parseOptionalInteger(searchParams.get("question_number"), "question_number");
   if (questionNumber !== undefined) {
-    if (questionNumber < config.questionNumberMin || questionNumber > config.questionNumberMax) {
+    if (config.question_number_min === null || config.question_number_max === null) {
+      throw invalidQuery(`question_number is not available for ${testValue}.`);
+    }
+    if (questionNumber < config.question_number_min || questionNumber > config.question_number_max) {
       throw invalidQuery(
-        `question_number must be between ${config.questionNumberMin} and ${config.questionNumberMax} for ${testValue}.`
+        `question_number must be between ${config.question_number_min} and ${config.question_number_max} for ${testValue}.`
       );
     }
     args.questionNumber = questionNumber;
@@ -97,8 +103,8 @@ export function parseQuestionSearch(searchParams: URLSearchParams): QuestionSear
 
   const responseFormat = searchParams.get("response_format");
   if (responseFormat !== null) {
-    if (!isResponseFormat(responseFormat) || !(config.responseFormats as readonly ResponseFormat[]).includes(responseFormat)) {
-      throw invalidQuery(`response_format is not valid for ${testValue}. Allowed formats: ${config.responseFormats.join(", ")}.`);
+    if (!isResponseFormat(responseFormat) || !(config.response_formats as readonly ResponseFormat[]).includes(responseFormat)) {
+      throw invalidQuery(`response_format is not valid for ${testValue}. Allowed formats: ${config.response_formats.join(", ")}.`);
     }
     args.responseFormat = responseFormat;
   }
@@ -123,7 +129,7 @@ export function filterQuestions(
     if (args.difficulty !== undefined && record.assessment_metadata.difficulty !== args.difficulty) {
       return false;
     }
-    if (args.responseFormat !== undefined && record.metadata.response_format !== args.responseFormat) {
+    if (args.responseFormat !== undefined && record.response_format !== args.responseFormat) {
       return false;
     }
     return true;
@@ -155,10 +161,10 @@ function parseOptionalInteger(value: string | null, name: string): number | unde
   if (value === null) {
     return undefined;
   }
-  if (!/^(0|[1-9]\d*)$/.test(value)) {
-    throw invalidQuery(`${name} must be a non-negative integer.`);
+  if (!/^-?\d+$/.test(value)) {
+    throw invalidQuery(`${name} must be an integer.`);
   }
-  return Number(value);
+  return Number.parseInt(value, 10);
 }
 
 function boundedRandomIndex(length: number, rng: Rng): number {
@@ -166,7 +172,6 @@ function boundedRandomIndex(length: number, rng: Rng): number {
   if (!Number.isFinite(value)) {
     return 0;
   }
-  return Math.min(Math.max(Math.floor(value * length), 0), length - 1);
+  const clamped = Math.min(Math.max(value, 0), 0.999999999999);
+  return Math.floor(clamped * length);
 }
-
-export const SEARCH_RESPONSE_FORMATS = RESPONSE_FORMATS;

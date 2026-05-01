@@ -1,4 +1,3 @@
-import { TEST_IDS } from "../lib/constants";
 import type { buildPlatformSpec } from "./data";
 
 type PlatformSpec = ReturnType<typeof buildPlatformSpec>;
@@ -19,17 +18,17 @@ export function renderSpecMarkdown(spec: PlatformSpec): string {
     ""
   ];
 
-  for (const test of TEST_IDS) {
-    const config = spec.tests[test];
-    if (config === undefined) {
-      continue;
-    }
+  for (const config of Object.values(spec.tests)) {
     lines.push(
       `### ${config.label}`,
       "",
-      `- Years: ${config.years.min}-${config.years.max}`,
+      `- Years: ${config.years === null ? "not available" : `${config.years.min}-${config.years.max}`}`,
       `- Sessions: ${config.sessions.length > 0 ? config.sessions.join(", ") : "none"}`,
-      `- Question numbers: ${config.question_numbers.min}-${config.question_numbers.max}`,
+      `- Question numbers: ${
+        config.question_numbers === null
+          ? "not available"
+          : `${config.question_numbers.min}-${config.question_numbers.max}`
+      }`,
       `- Response formats: ${config.response_formats.join(", ")}`,
       `- Difficulties: ${config.difficulty_values_present.join(", ")}`,
       `- Rows: ${config.row_count}`,
